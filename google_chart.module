@@ -1,0 +1,125 @@
+<?php
+// $Id$
+
+/**
+ * 示例 
+ * @access protected
+ * @return string
+ */
+function _google_chart_demo() {
+  // 饼图
+  $chart = array(
+    'rows' => array(
+      array('如家', 100),
+      array('汉庭', 200), 
+      array('七天', 1000)
+    ), 
+    'options' => array(
+      'title' => '门店数量', // 图表名称。根据图表类型不同，还可以设置其它参数
+    ), 
+    'column' => array(
+      '酒店名称' => 'string', // 列的名称和类型
+      '门店数量' => 'number'
+    ),
+    'width' => '900px', // 可设置宽与高
+    'height' => '400px',
+    'type' => 'PieChart', // 图表类型
+    'dom' => 'google_chart_test_pie' // 显示图表的页面 dom 元素
+  ); 
+
+  $html = google_chart_get_html($chart);
+
+  // 线段图
+  $chart = array(
+    'rows' => array(
+      array('201101', 100, 1000),
+      array('201102', 350, 2500), 
+      array('201103', 80, 600),
+      array('201104', 400, 3500),
+      array('201105', 560, 4500), 
+      array('201106', 800, 2000),
+    ), 
+    'options' => array(
+      'title' => '流量走势图'
+    ), 
+    'column' => array(
+      '月份' => 'string',
+      'UV' => 'number',
+      'PV' => 'number',
+     ),
+    'type' => 'LineChart',
+    'dom' => 'google_chart_test_line'
+  ); 
+
+  $html .= google_chart_get_html($chart);
+
+  return $html;
+}
+
+/**
+ * 传入数据，获取 google chart
+ * @param array $data 
+ * @access public
+ * @return string
+ */
+function google_chart_get_html($data) {
+  static $called;
+  
+  if (!isset($called)) {
+    dd_add_js('https://www.google.com/jsapi');
+    dd_add_js('google.load("visualization", "1", {packages:["corechart"]});', 'inline_nojq');
+    $called = 1;
+  }
+
+  $js = '<script type="text/javascript">';
+    
+  $js .= 'google.setOnLoadCallback(function(){';
+  $js .= 'var data = new google.visualization.DataTable();';
+
+  if (!empty($data['column'])) {
+    foreach ($data['column'] as $name => $type) {
+      $js .= "data.addColumn('" . $type . "', '" . $name . "');";
+    }
+  }
+
+  if (!empty($data['rows'])) {
+    $js .= 'data.addRows(';
+    $js .= dd_to_js($data['rows']);
+    $js .= ');';
+  }
+
+  if (!empty($data['options'])) {
+    $js .= 'var options = ';
+    $js .= dd_to_js($data['options']);
+    $js .= ';';
+  } else {
+    $js .= 'var options = {};';
+  }
+
+  /**
+   * 允许的图表类型，请参考 google 官方文档
+   * @link http://code.google.com/intl/zh-CN/apis/chart/interactive/docs/gallery/areachart.html
+   * LineChart、AreaChart、BarChart、BubbleChart、Piechart、SteppedAreaChart
+   */
+  if (empty($data['type'])) {
+    $data['type'] = 'LineChart';
+  }
+
+  $js .= 'var chart = new google.visualization.' . $data['type'] . '(document.getElementById("' . $data['dom'] . '"));';
+  
+  $js .= 'chart.draw(data, options);';
+
+  $js .= '});';
+
+  $js .= '</script>';
+
+  $js .= '<div id="' . $data['dom'] . '" class="google_chart google_cahrt_' . $data['type'] . '"';
+
+  if (!empty($data['width'])) {
+    $js .= ' style="width:' . $data['width'] . '; height:' . $data['height'] . '"';
+  }
+
+  $js .= '></div>';
+
+  return $js;
+}
